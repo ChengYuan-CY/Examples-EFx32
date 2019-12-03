@@ -1,0 +1,1 @@
+https://www.silabs.com/community/wireless/bluetooth/knowledge-base.topic.20.10.html/bt_mesh_embeddedpro-qoHB
