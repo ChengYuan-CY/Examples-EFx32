@@ -54,7 +54,26 @@
  ******************************************************************************/
 
 // uncomment this to enable configuration of vendor model
-//#define CONFIGURE_VENDOR_MODEL
+#define CONFIGURE_VENDOR_MODEL
+
+#ifdef CONFIGURE_VENDOR_MODEL
+#define VM_VENDOR_ID	0x02FF
+#define VM_SERVER_MODEL_ID	0x1111
+#define VM_CLIENT_MODEL_ID	0x2222
+#define VENDOR_GRP_SUB_ADDR         0xC003
+#define VENDOR_GRP_PUB_ADDR         0xC004
+
+typedef enum {
+	pub_addr_get = 0x1,
+	pub_addr_st,
+	user_name,
+	congrat
+}opcodes_t;
+
+/* List of the opcodes client model suppports */
+static opcodes_t my_opc[] = {pub_addr_get, pub_addr_st, user_name, congrat};
+
+#endif
 
 // uncomment this to enable provisioning using PB-GATT (PB-ADV is used by default)
 //#define PROVISION_OVER_GATT
@@ -62,8 +81,8 @@
 // uncomment this to use fixed network and application keys (for debugging only)
 #define USE_FIXED_KEYS
 
-// uncomment this to control the Light node from provisioner or get the request from Switch
-#define REMOTE_ONOFF_CTL_FROM_PROV
+// uncomment this to control the generic model/vendor model from provisioner
+#define REMOTE_CTL_FROM_PROV
 
 #define TIMER_ID_GET_DCD        20
 #define TIMER_ID_APPKEY_ADD     21
@@ -209,9 +228,7 @@ tsConfig _sConfig;
 #define LIGHT_CTL_CTRL_TEMPERATURE   0xC005
 #define LIGHT_CTL_STATUS_TEMPERATURE   0xC006
 
-#define VENDOR_GRP_ADDR         0xC003
-
-#define SENSOR_GRP_ADDR			0xC004
+#define SENSOR_GRP_ADDR			0xC007
 
 /* models used by simple light example (on/off only)
  * The beta SDK 1.0.1 and 1.1.0 examples are based on these
@@ -320,9 +337,10 @@ void gecko_bgapi_classes_init(void)
   //gecko_bgapi_class_sm_init();
   //mesh_native_bgapi_init();
 //  gecko_bgapi_class_mesh_node_init();   //
-#ifdef REMOTE_ONOFF_CTL_FROM_PROV
+#ifdef REMOTE_CTL_FROM_PROV
   gecko_bgapi_class_mesh_generic_server_init();   // If need to sub the message from group, need to initialize BGAPI class mesh_generic_server
   gecko_bgapi_class_mesh_generic_client_init();   // If need to pub the message to group, need to initialize BGAPI class mesh_generic_client
+  gecko_bgapi_class_mesh_vendor_model_init();
   gecko_bgapi_class_mesh_test_init();       // If need the provisioner to pub/sub to/from group, initialize BGAPI class mesh_test
 #endif
   gecko_bgapi_class_mesh_prov_init();
@@ -342,7 +360,6 @@ void gecko_bgapi_classes_init(void)
   mesh_native_bgapi_init();
   gecko_bgapi_class_mesh_config_client_init();
   gecko_bgapi_class_mesh_prov_init();
-
 
 //  gecko_bgapi_class_mesh_proxy_init();
 //  gecko_bgapi_class_mesh_proxy_server_init();
@@ -407,7 +424,6 @@ static void config_bind_add(uint16 model_id, uint16 vendor_id, uint8_t element_i
  *
  * */
 
-
 static void config_check()
 {
   uint8 i,elementIdx;
@@ -418,7 +434,6 @@ static void config_check()
 
   for(elementIdx=0; elementIdx<_sDCD.numElement;elementIdx++)
   {
-
     for(i=0; i<_sDCD.element[elementIdx].numS;i++)
       printf("SIG model ID: 0x%04x\r\n", _sDCD.element[elementIdx].SIG_models[i]);
 
@@ -492,13 +507,23 @@ static void config_check()
     {
       // this example only handles vendor model with vendor ID 0x02FF (Silabs) and model ID 0xABCD.
       // if such model found, configure it to publish/subscribe to a single group address
-      if((_sDCD.element[elementIdx].vendor_models[i].model_id == 0xABCD) && (_sDCD.element[elementIdx].vendor_models[i].vendor_id == 0x02FF))
+      if((_sDCD.element[elementIdx].vendor_models[i].model_id == VM_SERVER_MODEL_ID) && (_sDCD.element[elementIdx].vendor_models[i].vendor_id == VM_VENDOR_ID))
       {
-        config_pub_add(0xABCD, 0x02FF, elementIdx, VENDOR_GRP_ADDR);
-        config_sub_add(0xABCD, 0x02FF, elementIdx, VENDOR_GRP_ADDR);
+        config_pub_add(VM_SERVER_MODEL_ID, VM_VENDOR_ID, elementIdx, VENDOR_GRP_SUB_ADDR);
+        config_sub_add(VM_SERVER_MODEL_ID, VM_VENDOR_ID, elementIdx, VENDOR_GRP_SUB_ADDR);
         // using single appkey to bind all models. It could be also possible to use different appkey for the
         // vendor models
-        config_bind_add(0xABCD, 0x02FF, elementIdx, 0, 0);
+        config_bind_add(VM_SERVER_MODEL_ID, VM_VENDOR_ID, elementIdx, 0, 0);
+        printf("add the vendor model 0x%4.4X to sub/pub/bind list\r\n",_sDCD.element[elementIdx].vendor_models[i].model_id);
+      }
+      else if((_sDCD.element[elementIdx].vendor_models[i].model_id == VM_CLIENT_MODEL_ID) && (_sDCD.element[elementIdx].vendor_models[i].vendor_id == VM_VENDOR_ID))
+      {
+        config_pub_add(VM_CLIENT_MODEL_ID, VM_VENDOR_ID, elementIdx, VENDOR_GRP_PUB_ADDR);
+        config_sub_add(VM_CLIENT_MODEL_ID, VM_VENDOR_ID, elementIdx, VENDOR_GRP_PUB_ADDR);
+        // using single appkey to bind all models. It could be also possible to use different appkey for the
+        // vendor models
+        config_bind_add(VM_CLIENT_MODEL_ID, VM_VENDOR_ID, elementIdx, 0, 0);
+        printf("add the vendor model 0x%4.4X to sub/pub/bind list\r\n",_sDCD.element[elementIdx].vendor_models[i].model_id);
       }
     }
   #endif
@@ -617,120 +642,11 @@ static void DCD_decode(struct gecko_msg_mesh_config_client_dcd_data_evt_t *pDCD)
     }
 
   }
-//
-//
-//  _sDCD.element[0].loc = *pu16++;
-//
-//  _sDCD.element[0].numS = (uint8)(*pu16 & 0x00FF);
-//  _sDCD.element[0].numV = (uint8)((*pu16 & 0xFF00) >> 8);
-//  pu16++;
-//
-//  // grab the SIG models from the DCD data
-//  for(i=0; i<_sDCD.element[0].numS; i++)
-//  {
-//    _sDCD.element[0].SIG_models[i] = *pu16++;
-//    printf("SIG model ID: %4.4x\r\n", _sDCD.element[0].SIG_models[i]);
-//  }
-//
-//  // grab the vendor models from the DCD data
-//  for(i=0; i<_sDCD.element[0].numV; i++)
-//  {
-//    _sDCD.element[0].vendor_models.vendor_id = *pu16++;
-//    _sDCD.element[0].vendor_models.model_id = *pu16++;
-//    printf("vendor ID: %4.4x, model ID: %4.4x\r\n", _sDCD.element[0].vendor_models.vendor_id, _sDCD.element[0].vendor_models.model_id);
-//  }
-//
-//
-//  _sDCD.element[0].loc = *pu16++;
-//
-//
-//  _sDCD.numElem = pDCD->elements;
-//  _sDCD.numModels = pDCD->models;
-//
-//  pu8 = &(pDCD->element_data.data[2]);
-//
-//  _sDCD.numSIGModels = *pu8;
-//
-//  printf("Num sig models: %d\r\n", _sDCD.numSIGModels );
-//
-//  pu16 = (uint16 *)&(pDCD->element_data.data[4]);
-//
-//  modelsCap = sizeof(_sDCD.SIG_models)/sizeof(_sDCD.SIG_models[0]);
-//  modelsCap = (_sDCD.numSIGModels < modelsCap)?_sDCD.numSIGModels:modelsCap;
-//  // number of SIG models stored in the _sDCD structure
-//  _sDCD.numSIGModels = modelsCap;
-//
-//  // grab the SIG models from the DCD data
-//  for(i=0;i<_sDCD.numSIGModels;i++)
-//  {
-//    _sDCD.SIG_models[i] = *pu16;
-//    pu16++;
-//    printf("model ID: %4.4x\r\n", _sDCD.SIG_models[i]);
-//  }
-//
-//  pu8 = &(pDCD->element_data.data[3]);
-//
-//  _sDCD.numVendorModels = *pu8;
-//
-//  printf("Num vendor models: %d\r\n", _sDCD.numVendorModels);
-//
-//  pu16 = (uint16_t *) &(pDCD->element_data.data[4 + 2 * _sDCD.numSIGModels]);
-//
-//  modelsCap = sizeof(_sDCD.vendor_models)/sizeof(_sDCD.vendor_models[0]);
-//  modelsCap = (_sDCD.numVendorModels < modelsCap)?_sDCD.numVendorModels:modelsCap;
-//  // number of Vendor models stored in the _sDCD structure
-//  _sDCD.numVendorModels = modelsCap;
-//
-//  // grab the vendor models from the DCD data
-//  for (i = 0; i < _sDCD.numVendorModels; i++) {
-//    _sDCD.vendor_models[i].vendor_id = *pu16;
-//    pu16++;
-//    _sDCD.vendor_models[i].model_id = *pu16;
-//    pu16++;
-//
-//    printf("vendor ID: %4.4x, model ID: %4.4x\r\n", _sDCD.vendor_models[i].vendor_id, _sDCD.vendor_models[i].model_id);
-//  }
 
 }
 
 
-//static void config_retry()
-//{
-//
-//  uint8 timer_handle = 0;
-//
-//  switch(state)
-//  {
-//  case waiting_appkey_ack:
-//    timer_handle = TIMER_ID_APPKEY_ADD;
-//    break;
-//
-//  case waiting_bind_ack:
-//    timer_handle = TIMER_ID_APPKEY_BIND;
-//    break;
-//
-//  case waiting_pub_ack:
-//    timer_handle = TIMER_ID_PUB_SET;
-//    break;
-//
-//  case waiting_sub_ack:
-//    timer_handle = TIMER_ID_SUB_ADD;
-//    break;
-//
-//  default:
-//    printf("config_retry(): don't know how to handle state %d\r\n", state);
-//    break;
-//  }
-//
-//  if(timer_handle > 0)
-//  {
-//    printf("config retry: try step %d again\r\n", state);
-//    gecko_cmd_hardware_set_soft_timer(TIMER_MS_2_TIMERTICK(500), timer_handle, 1);
-//  }
-//
-//}
-
-#ifdef REMOTE_ONOFF_CTL_FROM_PROV
+#ifdef REMOTE_CTL_FROM_PROV
 void send_onoff_request(int retrans)
 {
   static uint8_t onOffCtl = 0;
@@ -772,6 +688,21 @@ void send_onoff_request(int retrans)
   }
 
 }
+
+void vendor_model_publish(void)
+{
+	uint8_t my_name[] = "EATON";
+	uint16 result;
+	/* Set up the publication data with User Name */
+	result = gecko_cmd_mesh_vendor_model_set_publication(0, VM_VENDOR_ID, VM_CLIENT_MODEL_ID, user_name, 1, sizeof(my_name)-1, my_name)->result;
+	printf("Set vendor model publication message, result %d\r\n", result);
+
+	/* Publish once, the data was set before */
+	result = gecko_cmd_mesh_vendor_model_publish(0, VM_VENDOR_ID, VM_CLIENT_MODEL_ID)->result;
+	printf("Publish vendor model publication message, result %d\r\n", result);
+}
+
+
 #endif
 
 /*******************************************************************************
@@ -867,9 +798,9 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
           vendor_id = _sConfig.bind_model[_sConfig.num_bind_done].vendor_id;
           element_idx = _sConfig.bind_model[_sConfig.num_bind_done].element_idx;
 
-          printf("\r\nAPP_BIND, config %d/%d:: model %4.4x key index %x\r\n", _sConfig.num_bind_done+1, _sConfig.num_bind, model_id, appkey_id);
+          printf("\r\nAPP_BIND, config %d/%d:: model 0x%4.4X vendor_id 0x%4.4X, element_idx %d key index %x\r\n", _sConfig.num_bind_done+1, _sConfig.num_bind, model_id, vendor_id, element_idx, appkey_id);
 
-  //        struct gecko_msg_mesh_prov_model_app_bind_rsp_t *model_app_bind_result = gecko_cmd_mesh_prov_model_app_bind(provisionee_address,
+          //        struct gecko_msg_mesh_prov_model_app_bind_rsp_t *model_app_bind_result = gecko_cmd_mesh_prov_model_app_bind(provisionee_address,
   //            provisionee_address,
   //          netkey_id,
   //          appkey_id,
@@ -915,19 +846,7 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
           element_idx = _sConfig.pub_model[_sConfig.num_pub_done].element_idx;
           pub_address = _sConfig.pub_address[_sConfig.num_pub_done];
 
-          printf("\r\npublish set, config %d/%d: model %4.4x -> address %4.4x\r\n", _sConfig.num_pub_done+1, _sConfig.num_pub, model_id, pub_address);
-
-  //        struct gecko_msg_mesh_prov_model_pub_set_rsp_t *model_pub_set_result = gecko_cmd_mesh_prov_model_pub_set(provisionee_address,
-  //          provisionee_address,
-  //          netkey_id,
-  //          appkey_id,
-  //          vendor_id,
-  //          model_id,
-  //          pub_address,
-  //          3,           /* Publication time-to-live value */
-  //          0, /* period = NONE */
-  //          0   /* model publication retransmissions */
-  //        );
+          printf("\r\npublish set, config %d/%d: model_id 0x%4.4X vendor_id 0x%4.4X, element_idx %d -> address %4.4x\r\n", _sConfig.num_pub_done+1, _sConfig.num_pub, model_id, vendor_id, element_idx, pub_address);
 
           struct gecko_msg_mesh_config_client_set_model_pub_rsp_t *model_pub_set_result = gecko_cmd_mesh_config_client_set_model_pub(netkey_id,
               provisionee_address,
@@ -978,13 +897,6 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
           printf("\r\nsubscription add, config %d/%d: model %4.4x -> address %4.4x\r\n", _sConfig.num_sub_done+1, _sConfig.num_sub, model_id, sub_address);
 
-  //        struct gecko_msg_mesh_prov_model_sub_add_rsp_t *model_sub_add_result = gecko_cmd_mesh_prov_model_sub_add(provisionee_address,
-  //            provisionee_address,
-  //          netkey_id,
-  //          vendor_id,
-  //          model_id,
-  //          sub_address);
-
           struct gecko_msg_mesh_config_client_add_model_sub_rsp_t *model_sub_add_result = gecko_cmd_mesh_config_client_add_model_sub(netkey_id,
               provisionee_address,
               element_idx,
@@ -1011,11 +923,13 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
         }
         break;
 
-  #ifdef REMOTE_ONOFF_CTL_FROM_PROV
+  #ifdef REMOTE_CTL_FROM_PROV
         case TIMER_ID_SEND_PUB_MSG:
           // send the pub message from provisioner
           printf("evt TIMER_ID_SEND_PUB_MSG send the message from provisioner\r\n");
-          send_onoff_request(0);
+//          send_onoff_request(0);
+
+          vendor_model_publish();
           break;
   #endif
 
@@ -1229,22 +1143,23 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
             printf("***\r\n configuration complete\r\n***\r\n");
             state = scanning;
 
-#ifdef REMOTE_ONOFF_CTL_FROM_PROV
+#ifdef REMOTE_CTL_FROM_PROV
             // If need to subscribe the message from switch node, bind and sub the group address here.
             uint8_t i = 0;
 
             /* If need to subscribe message from switch node or pub message to light node, bind and sub/pub the group address here.
             *
             * Below are the subscription and publication address Information
-            *         PubAddr   SubAddr
-            * Light   0xC002    0xC001
-            * Switch  0xC001    0xC002
-            *
+            *         		PubAddr   SubAddr
+            * Light   		0xC002    0xC001
+            * Switch  		0xC001    0xC002
+            * Vendor model	0xC003    None
             * If need to subscribe the message from Switch node, the provisioner's server model need to sub to 0xC001
             * If need to send control message to Light node, the provisioner's client model need to pub to 0xC001
+            * If need to send message with vendor model, the provisioner's vendor client model need to pub to 0xC003
             */
 
-              /* Set the subscription */
+              /* Set the subscription of Generic On Off server model*/
             struct gecko_msg_mesh_generic_server_init_rsp_t *genericServerInitRsp = gecko_cmd_mesh_generic_server_init();
             printf("gecko_cmd_mesh_generic_server_init %x\n\r", genericServerInitRsp->result);
 
@@ -1252,7 +1167,7 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
             printf("gecko_cmd_mesh_test_get_local_model_sub result: %x sub_add_len: %d\r\n", sub_setting->result, sub_setting->addresses.len);
 
             for(i=0; i<sub_setting->addresses.len; i++)
-              printf("gecko_cmd_mesh_test_get_local_model_sub sub_address: %x\r\n", sub_setting->addresses.data[i]);
+              printf("gecko_cmd_mesh_test_get_local_model_sub, model 0x%4.4X sub_address: %x\r\n", MESH_GENERIC_ON_OFF_SERVER_MODEL_ID, sub_setting->addresses.data[i]);
 
             if (!sub_setting->result && (sub_setting->addresses.len != 0)) {
               // In fact, need to check the subscription address list here.
@@ -1269,13 +1184,13 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
               printf("gecko_cmd_mesh_test_add_local_model_sub %x\n\r", addLocalModelRsp->result);
             }
 
-            /* Set the publication */
+            /* Set the publication of Generic On Off client model*/
             struct gecko_msg_mesh_generic_client_init_rsp_t *genericClientInitRsp = gecko_cmd_mesh_generic_client_init();
-            printf("gecko_cmd_mesh_generic_client_init %x\n\r", genericClientInitRsp->result);
+            printf("\r\ngecko_cmd_mesh_generic_client_init %x\n\r", genericClientInitRsp->result);
 
             struct gecko_msg_mesh_test_get_local_model_pub_rsp_t *pub_setting = gecko_cmd_mesh_test_get_local_model_pub(0, 0xFFFF, MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID);
             printf("gecko_cmd_mesh_test_get_local_model_pub result: %x\r\n", pub_setting->result);
-            printf("gecko_cmd_mesh_test_get_local_model_pub pub_address: 0x%04x\r\n", pub_setting->pub_address);
+            printf("gecko_cmd_mesh_test_get_local_model_pub, model 0x%4.4X pub_address: 0x%04x\r\n", MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID, pub_setting->pub_address);
 
             if (!sub_setting->result && (pub_setting->pub_address != 0)) {
               printf("Publication Configuration done already.\n");
@@ -1288,14 +1203,40 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
               printf("gecko_cmd_mesh_test_set_local_model_pub %x\n\r", setLocalModelPubRsp->result);
             }
 
+            /* Set the publication of vendor client model*/
+
+            struct gecko_msg_mesh_vendor_model_init_rsp_t *vendorModelInitRsp = gecko_cmd_mesh_vendor_model_init(0, VM_VENDOR_ID, VM_CLIENT_MODEL_ID, true, sizeof(my_opc), my_opc);;
+            printf("\r\ngecko_cmd_mesh_vendor_model_init %x\n\r", vendorModelInitRsp->result);
+
+            struct gecko_msg_mesh_test_get_local_model_pub_rsp_t *vm_pub_setting = gecko_cmd_mesh_test_get_local_model_pub(0, VM_VENDOR_ID, VM_CLIENT_MODEL_ID);
+            printf("gecko_cmd_mesh_test_get_local_model_pub result: %x\r\n", vm_pub_setting->result);
+            printf("gecko_cmd_mesh_test_get_local_model_pub, model 0x%4.4X pub_address: 0x%04x\r\n", VM_CLIENT_MODEL_ID, vm_pub_setting->pub_address);
+
+            if (!sub_setting->result && (pub_setting->pub_address != 0)) {
+              printf("Publication Configuration done already.\n");
+            }
+            else{
+              struct gecko_msg_mesh_test_bind_local_model_app_rsp_t *vmBindLocalModelRsp = gecko_cmd_mesh_test_bind_local_model_app(0, appkey_id, VM_VENDOR_ID, VM_CLIENT_MODEL_ID);
+              printf("gecko_cmd_mesh_test_bind_local_model_app %x\n\r", vmBindLocalModelRsp->result);
+
+              struct gecko_msg_mesh_test_set_local_model_pub_rsp_t *vmSetLocalModelPubRsp = gecko_cmd_mesh_test_set_local_model_pub(0, appkey_id, VM_VENDOR_ID, VM_CLIENT_MODEL_ID, 0xC003, 5, 0, 2, 0);
+              printf("gecko_cmd_mesh_test_set_local_model_pub %x\n\r", vmSetLocalModelPubRsp->result);
+            }
             // ------------------------------------------ //
-            printf("---------------- Dump sub/pub infor here ----------------\r\n");
+            printf("\r\n---------------- Dump sub/pub infor here ----------------\r\n");
             sub_setting = gecko_cmd_mesh_test_get_local_model_sub(0, 0xFFFF, MESH_GENERIC_ON_OFF_SERVER_MODEL_ID);
             for(i=0; i<sub_setting->addresses.len; (i=i+2))
-              printf("gecko_cmd_mesh_test_get_local_model_sub sub_address: 0x%02x%02x\r\n", sub_setting->addresses.data[i+1], sub_setting->addresses.data[i]);
+              printf("gecko_cmd_mesh_test_get_local_model_sub, SIG model 0x%4.4X, sub_address: 0x%02x%02x\r\n", MESH_GENERIC_ON_OFF_SERVER_MODEL_ID, sub_setting->addresses.data[i+1], sub_setting->addresses.data[i]);
+
+            sub_setting = gecko_cmd_mesh_test_get_local_model_sub(0, VM_VENDOR_ID, VM_SERVER_MODEL_ID);
+            for(i=0; i<sub_setting->addresses.len; (i=i+2))
+              printf("gecko_cmd_mesh_test_get_local_model_sub, vendor model 0x%4.4X, sub_address: 0x%02x%02x\r\n", VM_CLIENT_MODEL_ID, sub_setting->addresses.data[i+1], sub_setting->addresses.data[i]);
 
             pub_setting = gecko_cmd_mesh_test_get_local_model_pub(0, 0xFFFF, MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID);
-            printf("gecko_cmd_mesh_test_get_local_model_pub pub_address: 0x%04x\r\n", pub_setting->pub_address);
+            printf("gecko_cmd_mesh_test_get_local_model_pub, model 0x%4.4X, pub_address: 0x%04x\r\n", MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID, pub_setting->pub_address);
+
+            pub_setting = gecko_cmd_mesh_test_get_local_model_pub(0, VM_VENDOR_ID, VM_CLIENT_MODEL_ID);
+            printf("gecko_cmd_mesh_test_get_local_model_pub, vendor model 0x%4.4X, pub_address: 0x%04x\r\n", VM_CLIENT_MODEL_ID, pub_setting->pub_address);
             printf("---------------------------------------------------------\r\n");
 
             // uncomment it if need to control the light node from the provisioner
@@ -1409,7 +1350,7 @@ void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 //          {
 //            printf("***\r\nconfiguration complete\r\n***\r\n");
 
-#ifdef REMOTE_ONOFF_CTL_FROM_PROV
+#ifdef REMOTE_CTL_FROM_PROV
             // If need to subscribe the message from switch node, bind and sub the group address here.
             uint8_t i = 0;
 

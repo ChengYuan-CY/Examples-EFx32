@@ -33,7 +33,7 @@ const uint8_t __mesh_dcd[] = {
     /* Begin Primary Element */
         0x00, 0x00, /* Location = 0x0000 */
         0x05, /* Number of SIG Models = 0x05 */
-        0x00, /* Number of Vendor Models = 0x00 */
+        0x01, /* Number of Vendor Models = 0x01 */
         /* Begin SIG Models */
         0x02, 0x00, /* Health Server */
         0x01, 0x00, /* Configuration Client */
@@ -42,6 +42,7 @@ const uint8_t __mesh_dcd[] = {
         0x00, 0x00, /* Configuration Server */
         /* End SIG Models */
         /* Begin Vendor Models */
+        0xff, 0x02, 0x22, 0x22, /* Vendor Model */
         /* End Vendor Models */
     /* End Primary Element */
 };

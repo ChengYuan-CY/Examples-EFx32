@@ -239,14 +239,14 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="hardware|platform|protocol|app.c|app.h|displayconfigapp.h|display_interface.c|display_interface.h|dmadrv_config.h|efr32bg13p632f512gm48.ld|graphics.c|graphics.h|hal-config.h|init_app.h|init_board.h|init_mcu.h|lcd_driver.c|lcd_driver.h|main.c|pti.c|pti.h|uartdrv_config.h|gatt.xml|gatt_db.c|gatt_db.h|BgBuild_Log.txt|btMesh_configuration.json|mesh_app_memory_config.h|init_app.c|create_bl_files.bat|ble-configuration.h|dcd.c|init_mcu.c|hal-config-app-common.h|board_features.h|init_board.c|led_control.h|led_driver.h|led_routeloc.h|lightbulb.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="hardware|platform|protocol|app.c|app.h|displayconfigapp.h|display_interface.c|display_interface.h|dmadrv_config.h|efr32bg13p632f512gm48.ld|graphics.c|graphics.h|hal-config.h|init_app.h|init_board.h|init_mcu.h|lcd_driver.c|lcd_driver.h|main.c|pti.c|pti.h|uartdrv_config.h|gatt.xml|gatt_db.c|gatt_db.h|BgBuild_Log.txt|btMesh_configuration.json|mesh_app_memory_config.h|dcd.c|init_board.c|board_features.h|init_mcu.c|ble-configuration.h|create_bl_files.bat|init_app.c|hal-config-app-common.h|led_control.h|led_driver.h|led_routeloc.h|lightbulb.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 	</storageModule>
-	<storageModule generalProj.esf.protocolIds="com.silabs.sdk.stack.btmesh:1.5.2._620725459.com.silabs.stack.ble:2.12.3.0_2129797433" generalProj.esf.protocolNames="btmesh" moduleId="com.silabs.ss.framework.ide.project.core.cpp" project.generation="1988" projectCommon.boardIds="brd4104a:0.0.0.A00 brd4001a:0.0.0.A01" projectCommon.buildArtifactType="EXE" projectCommon.importModeId="LINK_LIBRARIES" projectCommon.partId="mcu.arm.efr32.bg13.efr32bg13p632f512gm48" projectCommon.sdkId="com.silabs.sdk.stack.btmesh:1.5.2._620725459"/>
+	<storageModule generalProj.esf.protocolIds="com.silabs.sdk.stack.btmesh:1.5.2._620725459.com.silabs.stack.ble:2.12.3.0_2129797433" generalProj.esf.protocolNames="btmesh" moduleId="com.silabs.ss.framework.ide.project.core.cpp" project.generation="2033" projectCommon.boardIds="brd4104a:0.0.0.A00 brd4001a:0.0.0.A01" projectCommon.buildArtifactType="EXE" projectCommon.importModeId="LINK_LIBRARIES" projectCommon.partId="mcu.arm.efr32.bg13.efr32bg13p632f512gm48" projectCommon.sdkId="com.silabs.sdk.stack.btmesh:1.5.2._620725459"/>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="soc-btmesh-provisioner.com.silabs.ss.framework.ide.project.core.cdt.cdtMbsProjectType.643357765" name="SLS CDT Project" projectType="com.silabs.ss.framework.ide.project.core.cdt.cdtMbsProjectType"/>
 	</storageModule>

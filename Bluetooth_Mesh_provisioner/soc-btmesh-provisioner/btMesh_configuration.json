@@ -11,7 +11,7 @@
         "Name": "Primary Element",
         "Loc": "0x0000",
         "NumS": "5",
-        "NumV": "0",
+        "NumV": "1",
         "SIG Models": [
           "0x0002",
           "Health Server",
@@ -25,13 +25,15 @@
           "Configuration Server"]
         ,
         "Vendor Models": [
-          ]
+          "0x222202FF",
+          "Vendor Model"]
+        
       }]
     
   },
   "Memory configuration": {
     "MAX_ELEMENTS": "1",
-    "MAX_MODELS": "5",
+    "MAX_MODELS": "6",
     "MAX_APP_BINDS": "4",
     "MAX_SUBSCRIPTIONS": "4",
     "MAX_NETKEYS": "4",
