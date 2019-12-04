@@ -1,0 +1,1 @@
+These examples demonstrate how to use the vendor mode in Bluetooth Mesh network. These two example doesn't support local provisioning, so you should use the embedded provisioner for provisioning them.
